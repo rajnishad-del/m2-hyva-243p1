@@ -378,6 +378,7 @@ return [
         'Magento_WishlistAnalytics' => 1,
         'Magento_WishlistGraphQl' => 1,
         'Magento_WishlistSampleData' => 1,
+        'Aheadworks_Rbslider' => 1,
         'Hyva_Theme' => 1,
         'Hyva_Email' => 1,
         'Hyva_GraphqlTokens' => 1,
