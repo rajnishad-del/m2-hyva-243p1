@@ -387,6 +387,7 @@ return [
         'Hyva_MollieThemeBundle' => 1,
         'Hyva_OrderCancellationWebapi' => 1,
         'Humcommerce_RbsliderHyvacompat' => 1,
+        'Magepow_Core' => 1,
         'Mollie_Payment' => 1,
         'Mollie_HyvaCompatibility' => 1,
         'PayPal_Braintree' => 1,
