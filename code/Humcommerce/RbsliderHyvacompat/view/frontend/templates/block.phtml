@@ -90,14 +90,14 @@ use Magento\Framework\Escaper; // Escaper for HTML
                 //     }
                 // }, '.uk-dotnav, .uk-slidenav');
 
-                const observer = new IntersectionObserver((entries) => {
-                    if (entries[0].isIntersecting) {
-                        this.initSlider();
-                        observer.disconnect();
-                    }
-                });
-
-                observer.observe(this.$el);
+                //this load file only when banner is in viewport, this is vanilla js
+                // const observer = new IntersectionObserver((entries) => {
+                //     if (entries[0].isIntersecting) {
+                //         this.initSlider();
+                //         observer.disconnect();
+                //     }
+                // });
+                // observer.observe(this.$el);
 
 
                 if (this.options.bannerSchedule.length > 0) {
@@ -111,11 +111,26 @@ use Magento\Framework\Escaper; // Escaper for HTML
             },
 
             initSlider() {
+                // Prevent duplicate loads
+                if (window.awRbslider === 'loading' || window.awRbslider === 'loaded') {
+                    return;
+                }
+
+                window.awRbslider = 'loading';
+
                 const script = document.createElement('script');
                 script.src = `<?= $escaper->escapeJs($block->getViewFileUrl("Humcommerce_RbsliderHyvacompat/js/components/slideshow.js")) ?>`;
+
                 script.onload = () => {
                     console.log('RbsliderHyvacompat slideshow script loaded');
-                }
+                    window.awRbslider = 'loaded';
+                };
+
+                script.onerror = () => {
+                    console.error('Failed to load RbsliderHyvacompat slideshow script');
+                    window.awRbslider = undefined; // allow retry if needed
+                };
+
                 document.head.appendChild(script);
             },
 
@@ -276,6 +291,8 @@ use Magento\Framework\Escaper; // Escaper for HTML
             x-data='initAwRbslider(<?= /* @noEscape */ $block->jsonEncode($sliderConfig) ?>)'
 
             x-init='init()'
+
+            x-intersect.once="initSlider()"
 
             data-aw-rbslider-banner-id='<?= /* @noEscape */ $bannerBlock->getBanner()->getId(); ?>'
             class="aw-rbslider-container uk-slidenav-position"> <!-- data-mage-inti imports the js function along with configuration values from banner.php -->
