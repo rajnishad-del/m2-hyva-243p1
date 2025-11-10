@@ -112,23 +112,23 @@ use Magento\Framework\Escaper; // Escaper for HTML
 
             initSlider() {
                 // Prevent duplicate loads
-                if (window.awRbslider === 'loading' || window.awRbslider === 'loaded') {
+                if (window.awRbsliderCheck === 'loading' || window.awRbsliderCheck === 'loaded') {
                     return;
                 }
 
-                window.awRbslider = 'loading';
+                window.awRbsliderCheck = 'loading';
 
                 const script = document.createElement('script');
                 script.src = `<?= $escaper->escapeJs($block->getViewFileUrl("Humcommerce_RbsliderHyvacompat/js/components/slideshow.js")) ?>`;
 
                 script.onload = () => {
                     console.log('RbsliderHyvacompat slideshow script loaded');
-                    window.awRbslider = 'loaded';
+                    window.awRbsliderCheck = 'loaded';
                 };
 
                 script.onerror = () => {
                     console.error('Failed to load RbsliderHyvacompat slideshow script');
-                    window.awRbslider = undefined; // allow retry if needed
+                    window.awRbsliderCheck = undefined; // allow retry if needed
                 };
 
                 document.head.appendChild(script);
