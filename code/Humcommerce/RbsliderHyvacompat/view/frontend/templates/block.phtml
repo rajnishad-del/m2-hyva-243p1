@@ -2,25 +2,19 @@
 
 declare(strict_types=1);
 
-use Aheadworks\Rbslider\Block\Banner; // Banner block class
-use Magento\Framework\Escaper; // Escaper for HTML
+use Aheadworks\Rbslider\Block\Banner;
+use Magento\Framework\Escaper;
 
 /** @var Banner $block */
 /** @var Escaper $escaper */
 
 ?>
 
-
-
 <script>
     'use strict';
 
     function initAwRbslider(config) {
         return {
-
-            /**
-             * Object.assign is used to override default values be provided, simple object destructuring can be used here too, but not all browsers that use hyva support it.
-             */
             options: Object.assign({
                 autoplay: true,
                 pauseTimeBetweenTransitions: 3000,
@@ -32,75 +26,11 @@ use Magento\Framework\Escaper; // Escaper for HTML
                 sliderItemSelector: '.aw-rbslider-item'
             }, config),
 
-            slideshow: {
-                options: {}
-            },
+            slideshow: null,
+            isInitialized: false,
 
-            /**
-             * Initialize widget
-             */
             init() {
-
-                /*if (this.options.isRandomOrderImage) {
-                    this._randomSort();
-                }*/
-                // UIkit.on('init.uk.component', (e, name, data) => {
-                //     if (name === 'slideshow') {
-                //         this.loadSlides(data);
-                //     }
-                // });
-
-                // const slideshow = UIkit.slideshow(this.$el, {
-                //     autoplay: this.options.autoplay,
-                //     autoplayInterval: this.options.pauseTimeBetweenTransitions,
-                //     duration: this.options.slideTransitionSpeed,
-                //     pauseOnHover: this.options.isStopAnimationMouseOnBanner,
-                //     animation: this.options.animation
-                // });
-                // Rewrite slideshow resize method
-                //this.slideshow.resize = () => this.resizeBanner(this,this.$el);
-
-                // Disable stop animation, if click on slide navigaton or dot navigation
-                // this.element.on('click.uk.slideshow', '[data-uk-slideshow-item]', function(e) {
-                //     if (this.slideshow.options.autoplay) {
-                //         this.slideshow.start();
-                //     }
-                // });
-
-                //above code in js(which is in jquery)
-                // Array.from(this.$el.querySelectorAll('[data-uk-slideshow-item]')).map(item => {
-                //     item.addEventListener('click.uk.slideshow-item', (e) => {
-                //         if (slideshow.options.autoplay) {
-                //             slideshow.start();
-                //         }
-                //     });
-                // });
-
-
-
-                // Slideshow paused, if mouse cursor on slide navigaton or dot navigation
-                // this.element.on({
-                //     mouseenter: function() {
-                //         if (slideshow.options.pauseOnHover) {
-                //             slideshow.hovering = true;
-                //         }
-                //     },
-                //     mouseleave: function() {
-                //         slideshow.hovering = false;
-                //     }
-                // }, '.uk-dotnav, .uk-slidenav');
-
-                //this load file only when banner is in viewport, this is vanilla js
-                // const observer = new IntersectionObserver((entries) => {
-                //     if (entries[0].isIntersecting) {
-                //         this.initSlider();
-                //         observer.disconnect();
-                //     }
-                // });
-                // observer.observe(this.$el);
-
-
-                if (this.options.bannerSchedule.length > 0) {
+                if (this.options.bannerSchedule && this.options.bannerSchedule.length > 0) {
                     if (!this.timeValidator([this.options.bannerSchedule[0]])) {
                         this.delayedUpdate(this.options.bannerSchedule[0]);
                     }
@@ -111,91 +41,93 @@ use Magento\Framework\Escaper; // Escaper for HTML
             },
 
             initSlider() {
-                // Prevent duplicate loads
-                if (window.awRbsliderCheck === 'loading' || window.awRbsliderCheck === 'loaded') {
-                    return;
-                }
+                if (this.isInitialized) return;
 
-                window.awRbsliderCheck = 'loading';
+                // Wait for script to be loaded
+                const checkAndInit = () => {
+                    if (typeof window.awRbslider === 'function') {
+                        this.isInitialized = true;
+                        this.slideshow = window.awRbslider(this.$el, {
+                            autoplay: this.options.autoplay,
+                            autoplayInterval: this.options.pauseTimeBetweenTransitions,
+                            duration: this.options.slideTransitionSpeed,
+                            pauseOnHover: this.options.isStopAnimationMouseOnBanner,
+                            animation: this.options.animation
+                        });
+
+                        // Initialize the slideshow
+                        this.slideshow.init();
+
+                        // Load slides lazily
+                        this.loadSlides();
+                    } else if (!window.awRbsliderLoading) {
+                        this.loadScript();
+                        setTimeout(checkAndInit, 100);
+                    } else {
+                        setTimeout(checkAndInit, 100);
+                    }
+                };
+
+                checkAndInit();
+            },
+
+            loadScript() {
+                if (window.awRbsliderLoading || window.awRbslider) return;
+
+                window.awRbsliderLoading = true;
 
                 const script = document.createElement('script');
                 script.src = `<?= $escaper->escapeJs($block->getViewFileUrl("Humcommerce_RbsliderHyvacompat/js/components/slideshow.js")) ?>`;
 
                 script.onload = () => {
                     console.log('RbsliderHyvacompat slideshow script loaded');
-                    window.awRbsliderCheck = 'loaded';
+                    window.awRbsliderLoading = false;
                 };
 
                 script.onerror = () => {
                     console.error('Failed to load RbsliderHyvacompat slideshow script');
-                    window.awRbsliderCheck = undefined; // allow retry if needed
+                    window.awRbsliderLoading = false;
                 };
 
                 document.head.appendChild(script);
             },
 
+            handleNavClick(type, event) {
+                event.preventDefault();
+
+                if (!this.slideshow) return;
+
+                if (type === 'previous') {
+                    this.slideshow.previous();
+                } else if (type === 'next') {
+                    this.slideshow.next();
+                } else if (typeof type === 'number') {
+                    this.slideshow.show(type);
+                }
+
+                // Restart autoplay if enabled
+                if (this.slideshow.options.autoplay) {
+                    this.slideshow.start();
+                }
+            },
+
             pauseOnEnter() {
-                if (this.slideshow.options.pauseOnHover) {
+                if (this.slideshow && this.slideshow.options.pauseOnHover) {
                     this.slideshow.hovering = true;
                 }
             },
 
             resumeOnLeave() {
-                this.slideshow.hovering = false;
-            },
-
-            /**
-             * Recalculate the width and height of the banner
-             */
-            resizeBanner(slideshow, componentRoot) {
-                const mainContent = componentRoot.closest('#maincontent, .page-wrapper');
-
-                let width,
-                    height = slideshow.options.height;
-
-                // Recalculate width
-                if (slideshow.slides.length) {
-                    width = slideshow.slides[0].querySelector('img.aw-rbslider__img').naturalWidth;
-                }
-
-                if (mainContent) {
-                    if (mainContent.getBoundingClientRect().width < width) {
-                        width = mainContent.getBoundingClientRect().width;
-                    }
-                    componentRoot.style.width = width + 'px';
-                }
-                // else if (document.querySelector('.page-wrapper')) {
-                //     // AW RBSlider compatibility
-                //     const containerBox = document.querySelector('.page-wrapper').getBoundingClientRect();
-
-                //     const containerWidth = Math.floor(containerBox.width * 0.7);
-
-                //     if (containerWidth < width) {
-                //         width = containerWidth;
-                //     }
-                //     componentRoot.style.width = width + 'px';
-                // }
-                // Recalculate height
-                if (slideshow.options.height === 'auto' && slideshow.slides.length) {
-                    slideshow.slides.style.height = '';
-
-                    height = slideshow.slides[0].getBoundingClientRect.height;
-
-                    slideshow.container.style.height = height + 'px';
-
-                    slideshow.slides.map(slide => {
-                        slide.style.height = height + 'px';
-                        slide.style.position = 'absolute';
-                    });
+                if (this.slideshow) {
+                    this.slideshow.hovering = false;
                 }
             },
 
-            /**
-             * Lazy load slides
-             */
-            loadSlides(slideshow) {
-                slideshow.slides.each((index, slideElem) => {
-                    if (index) {
+            loadSlides() {
+                const slides = this.$el.querySelectorAll('.aw-rbslider-item');
+
+                slides.forEach((slideElem, index) => {
+                    if (index > 0) {
                         const slideImg = slideElem.querySelector('img.aw-rbslider__img');
                         if (slideImg && slideImg.dataset.src) {
                             slideImg.addEventListener('load', () => {
@@ -208,17 +140,15 @@ use Magento\Framework\Escaper; // Escaper for HTML
                 });
             },
 
-            /**
-             * Compare current time with schedule
-             *
-             * @param schedule
-             */
             timeValidator(schedule) {
-                const currentDateMinute = Date.now() / 1000 / 60;
+                const currentDate = new Date();
+                const currentMinute = Math.floor(currentDate.getTime() / 1000 / 60);
                 let isValid = false;
 
                 schedule.forEach(item => {
-                    if (currentDateMinute === new Date(item).getTime() / 1000 / 60) {
+                    const scheduleDate = new Date(item);
+                    const scheduleMinute = Math.floor(scheduleDate.getTime() / 1000 / 60);
+                    if (currentMinute === scheduleMinute) {
                         isValid = true;
                     }
                 });
@@ -226,86 +156,57 @@ use Magento\Framework\Escaper; // Escaper for HTML
                 return isValid;
             },
 
-            /**
-             * Send request for clean banner cache
-             *
-             * @param bannerId
-             */
             sendRequest(bannerId) {
+                if (!this.options.cacheCleanUrl) return;
+
                 fetch(this.options.cacheCleanUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        bannerId
+                        bannerId: bannerId
                     })
-                });
+                }).catch(err => console.error('Cache clean request failed:', err));
             },
 
-            /**
-             * Schedule call to sendRequest for future time
-             *
-             * @param futureTime
-             */
             delayedUpdate(futureTime) {
-
-                const currentDateMinute = Date.now() / 1000 / 60;
-
-                const interval = (new Date(futureTime).getTime() / 1000 / 60) - currentDateMinute;
+                const currentDate = new Date();
+                const futureDate = new Date(futureTime);
+                const interval = futureDate.getTime() - currentDate.getTime();
 
                 if (interval > 0) {
-                    setTimeout(() => this.sendRequest(self.options.bannerId), interval)
+                    setTimeout(() => this.sendRequest(this.options.bannerId), interval);
                 }
-            },
-
-            /**
-             * Random sort
-             * @private
-             */
-            _randomSort() {
-                const sliderListSelector = this.options.sliderListSelector,
-                    sliderItemSelector = this.options.sliderItemSelector;
-
-                this.$el.querySelector(sliderListSelector)
-                    .innerHtml = Array.from(this.$el.querySelectorAll(sliderListSelector + ' ' + sliderItemSelector).sort(() => {
-                        return Math.random() - 0.5;
-                    })).map(item => item.outerHtml).join('');
             }
         };
     }
 </script>
 
-
-
-
-<?php if ($bannersBlock = $block->getBlocks()): ?> <!-- Check if banner blocks exist -->
-    <?php foreach ($bannersBlock as $bannerBlock) : ?> <!-- Loop banner blocks -->
+<?php if ($bannersBlock = $block->getBlocks()): ?>
+    <?php foreach ($bannersBlock as $bannerBlock) : ?>
         <?php
         $dotNavItems = '';
         $slideCounter = 1;
         $sliderConfig = $block->getBannerMageInitParams($bannerBlock)['awRbslider'];
         ?>
         <div
-
             x-data='initAwRbslider(<?= /* @noEscape */ $block->jsonEncode($sliderConfig) ?>)'
-
             x-init='init()'
-
             x-intersect.once="initSlider()"
-
             data-aw-rbslider-banner-id='<?= /* @noEscape */ $bannerBlock->getBanner()->getId(); ?>'
-            class="aw-rbslider-container uk-slidenav-position"> <!-- data-mage-inti imports the js function along with configuration values from banner.php -->
+            class="aw-rbslider-container uk-slidenav-position">
             <div class="uk-slideshow uk-overlay-active">
                 <?php foreach ($bannerBlock->getSlides() as $key => $slide) : ?>
                     <div class="aw-rbslider-item">
                         <div class="aw-rbslider-img-wrapper">
                             <picture>
-                                <source media="(max-width: 480px)" srcset="<?= /* @noEscape */ $block->getSlideMobileImgUrl($slide) ?>"
-                                    class="aw-rbslider__img  <?= $slideCounter === 1 ? 'is-loaded' : '' ?>"
+                                <source media="(max-width: 480px)"
+                                    srcset="<?= /* @noEscape */ $block->getSlideMobileImgUrl($slide) ?>"
+                                    class="aw-rbslider__img <?= $slideCounter === 1 ? 'is-loaded' : '' ?>"
                                     <?= $slideCounter !== 1 ? 'data-' : '' ?>
                                     title="<?= $escaper->escapeHtml($slide->getImgTitle()) ?>" />
-                                <img class="aw-rbslider__img  <?= $slideCounter === 1 ? 'is-loaded' : '' ?>"
+                                <img class="aw-rbslider__img <?= $slideCounter === 1 ? 'is-loaded' : '' ?>"
                                     <?= $slideCounter !== 1 ? 'data-' : '' ?>src="<?= /* @noEscape */ $block->getSlideImgUrl($slide) ?>"
                                     title="<?= $escaper->escapeHtml($slide->getImgTitle()) ?>"
                                     alt="<?= $escaper->escapeHtml($slide->getImgAlt()) ?>" />
@@ -330,47 +231,31 @@ use Magento\Framework\Escaper; // Escaper for HTML
                             <?php endif; ?>
                         </div>
                     </div>
-                    <?php $dotNavItems .= '<li data-uk-slideshow-item="' . $key . '"
-
-                    x-on:[click.uk.slideshow]="slideshow.options.autoplay && slideshow.start()"
-
-                    ><a href="#"></a></li>' ?>
+                    <?php $dotNavItems .= '<li data-slide-index="' . $key . '"><a href="#" @click="handleNavClick(' . $key . ', $event)"></a></li>'; ?>
                     <?php $slideCounter++; ?>
-                <?php endforeach; ?> <!-- Loop slides -->
+                <?php endforeach; ?>
             </div>
-            <?php if (count($bannerBlock->getSlides()) > 1): ?> <!-- If more than 1 slide, show nav -->
+            <?php if (count($bannerBlock->getSlides()) > 1): ?>
                 <?php if ($bannerBlock->getBanner()->getDisplayArrows()) : ?>
                     <a href="#"
                         class="uk-slidenav uk-slidenav-contrast uk-slidenav-previous"
-
-                        @mouseenter="pauseOnEnter"
-
-                        @mouseleave="resumeOnLeave"
-
-                        x-on:[click.uk.slideshow]="slideshow.options.autoplay && slideshow.start()"
-
-                        data-uk-slideshow-item="previous">
+                        @mouseenter="pauseOnEnter()"
+                        @mouseleave="resumeOnLeave()"
+                        @click="handleNavClick('previous', $event)">
                         <span class="visually-hidden"><?= $escaper->escapeHtml(__('Show previous slide')) ?></span>
                     </a>
                     <a href="#"
                         class="uk-slidenav uk-slidenav-contrast uk-slidenav-next"
-
-                        @mouseenter="pauseOnEnter"
-
-                        @mouseleave="resumeOnLeave"
-
-                        x-on:[click.uk.slideshow]="slideshow.options.autoplay && slideshow.start()"
-
-                        data-uk-slideshow-item="next">
+                        @mouseenter="pauseOnEnter()"
+                        @mouseleave="resumeOnLeave()"
+                        @click="handleNavClick('next', $event)">
                         <span class="visually-hidden"><?= $escaper->escapeHtml(__('Show next slide')) ?></span>
                     </a>
                 <?php endif; ?>
                 <?php if ($bannerBlock->getBanner()->getDisplayBullets()) : ?>
                     <ul class="uk-dotnav uk-dotnav-contrast uk-position-bottom uk-flex-center"
-
-                        @mouseenter="pauseOnEnter"
-
-                        @mouseleave="resumeOnLeave">
+                        @mouseenter="pauseOnEnter()"
+                        @mouseleave="resumeOnLeave()">
                         <?= /* @noEscape */ $dotNavItems ?>
                     </ul>
                 <?php endif; ?>
