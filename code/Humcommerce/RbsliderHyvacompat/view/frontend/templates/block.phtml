@@ -90,6 +90,14 @@ use Magento\Framework\Escaper; // Escaper for HTML
                 //     }
                 // }, '.uk-dotnav, .uk-slidenav');
 
+                const observer = new IntersectionObserver((entries) => {
+                    if (entries[0].isIntersecting) {
+                        this.initSlider();
+                        observer.disconnect();
+                    }
+                });
+
+                observer.observe(this.$el);
 
 
                 if (this.options.bannerSchedule.length > 0) {
@@ -100,6 +108,15 @@ use Magento\Framework\Escaper; // Escaper for HTML
                         this.sendRequest(this.options.bannerId);
                     }
                 }
+            },
+
+            initSlider() {
+                const script = document.createElement('script');
+                script.src = `<?= $escaper->escapeJs($block->getViewFileUrl("Humcommerce_RbsliderHyvacompat/js/components/slideshow.js")) ?>`;
+                script.onload = () => {
+                    console.log('RbsliderHyvacompat slideshow script loaded');
+                }
+                document.head.appendChild(script);
             },
 
             pauseOnEnter() {
