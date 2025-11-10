@@ -1,0 +1,45 @@
+sudo chmod 777 -R .
+
+sudo chmod 777 -R var generated
+
+composer require magento/module-bundle-sample-data magento/module-catalog-rule-sample-data magento/module-catalog-sample-data magento/module-cms-sample-data magento/module-configurable-sample-data magento/module-customer-sample-data magento/module-downloadable-sample-data magento/module-grouped-product-sample-data magento/module-msrp-sample-data magento/module-offline-shipping-sample-data magento/module-product-links-sample-data magento/module-review-sample-data magento/module-sales-rule-sample-data magento/module-sales-sample-data magento/module-swatches-sample-data magento/module-tax-sample-data magento/module-theme-sample-data magento/module-widget-sample-data magento/module-wishlist-sample-data magento/sample-data-media
+
+bin/magento setup:upgrade && bin/magento setup:di:compile && bin/magento setup:static-content:deploy -f && bin/magento cache:flush
+
+bin/magento setup:upgrade && bin/magento setup:di:compile && bin/magento cache:flush
+
+https://app.m2-hyva-243p1.test/
+
+https://app.m2-hyva-243p1.test/backend
+
+--admin-user="admin" \
+--admin-password="Admin@123"  \
+--admin-firstname="Admin" \
+--admin-lastname="User"
+Admin email: admin@gmail.compassword = Admin@123
+email = admin@gmail.com
+
+
+git reset --hard HEAD && git clean -fd
+
+sudo rm -rf generated var
+
+bin/magento cache:disable
+
+bin/magento cache:disable layout full_page block_html
+
+bin/magento dev:di:info "Hyva\\CompatModuleFallback\\Model\\CompatModuleRegistry"
+
+<!-- Remove all blocks -->
+<referenceContainer name="page.wrapper" remove="true"/>
+
+
+bin/magento dev:template-hints:enable
+
+rm -rf var generated
+
+sudo chown -R www-data:www-data .     (inside warden shell)
+
+vendor/bin/cache-clean.js --watch      (inside warden shell)
+
+ls -l app/code/Humcommerce/RbsliderHyvacompat/view/frontend/templates

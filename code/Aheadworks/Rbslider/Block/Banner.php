@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Aheadworks Inc.
  *
@@ -14,6 +15,7 @@
  * @copyright  Copyright (c) 2022 Aheadworks Inc. (https://aheadworks.com/)
  * @license    https://aheadworks.com/end-user-license-agreement/
  */
+
 declare(strict_types=1);
 
 namespace Aheadworks\Rbslider\Block;
@@ -50,7 +52,7 @@ class Banner extends Template implements IdentityInterface
      * Path to template file in theme
      * @var string
      */
-    protected $_template = 'Aheadworks_Rbslider::block.phtml';
+    protected $_template = 'Aheadworks_Rbslider::block.phtml'; //it automatically declares the template
 
     /**
      * @var BlockRepositoryInterface
@@ -195,7 +197,6 @@ class Banner extends Template implements IdentityInterface
             'bannerId' => $banner->getId(),
             'cacheCleanUrl' => $this->getCacheCleanUrl()
         ];
-
         return ['awRbslider' => $bannerInitParams];
     }
 

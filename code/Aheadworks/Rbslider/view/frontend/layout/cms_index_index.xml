@@ -19,7 +19,7 @@
                 </arguments>
             </block>
         </referenceContainer>
-        <referenceContainer name="content">
+        <referenceContainer name="content">            <!-- this is the main thing, removing this removes the banner. the reason why we don't have template here because Aheadworks\Rbslider\Block\Banner internally declares templates-->
             <block class="Aheadworks\Rbslider\Block\Banner" name="banner_home_content_top" as="banner_home_content_top" before="-">
                 <arguments>
                     <!-- Content Top -->
