@@ -45,3 +45,5 @@ vendor/bin/cache-clean.js --watch      (inside warden shell)
 ls -l app/code/Humcommerce/RbsliderHyvacompat/view/frontend/templates
 
 git checkout branchname
+
+gnome-terminal .

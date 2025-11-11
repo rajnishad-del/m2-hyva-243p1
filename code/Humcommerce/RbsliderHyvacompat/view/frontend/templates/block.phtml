@@ -2,7 +2,12 @@
 
 declare(strict_types=1);
 
+//import methods from app/code/Aheadworks/Rbslider/Block/Banner.php
 use Aheadworks\Rbslider\Block\Banner;
+
+//$escaper protects your website from XSS (Cross-Site Scripting) attacks by sanitizing dynamic 
+//content before displaying it in HTML, JavaScript, URLs, or CSS. 
+//It's a security tool that ensures malicious code can't be injected through user input or database content.
 use Magento\Framework\Escaper;
 
 /** @var Banner $block */
@@ -11,6 +16,45 @@ use Magento\Framework\Escaper;
 ?>
 
 <script>
+    // User hits URL
+    // Server sends HTML
+    // Browser parses HTML, builds DOM
+    // Alpine.js file (alpine3.min.js) loads and executes
+    // Alpine creates component (x-data='initAwRbslider(...)')
+    // Alpine init() runs (x-init='init()')
+    // Intersection Observer setup (x-intersect.once="initSlider()")
+    // Page rendered, user sees content
+
+    // STATUS:
+    // ├─alpine3.min.js loaded
+    // ├─Alpine component created
+    // ├─Intersection Observer watching banner
+    // ├─slideshow.js NOT loaded yet (not needed yet!)
+    // └─Banner below viewport
+
+    // Banner enters viewport
+    // │
+    // ├─→ x-intersect.once triggers
+    // │   │
+    // │   └─→ initSlider() called
+    // │       │
+    // │       ├─→ Check if window.awRbslider exists
+    // │       │   └─→ NO, it doesn't exist (slideshow.js not loaded!)
+    // │       │
+    // │       ├─→ load slideshow.js
+    // │       │   │
+    // │       │   └─→ loadScript() called
+    // │       │       │
+    // │       │       ├─→ Create <script> element
+    // │       │       ├─→ Set src = ".../slideshow.js"
+    // │       │       ├─→ Append to <head>
+    // │       │       └─→ Browser requests slideshow.js from server
+    // │       │           └─→ GET /static/.../slideshow.js
+    // │       │
+    // │       ├─→ Wait for script to load (checkAndInit loop)
+    // │       │
+    // │       └─→ (Continue after script loads...)
+
     'use strict';
 
     function initAwRbslider(config) {
@@ -183,11 +227,12 @@ use Magento\Framework\Escaper;
     }
 </script>
 
+
 <?php if ($bannersBlock = $block->getBlocks()): ?>
     <?php foreach ($bannersBlock as $bannerBlock) : ?>
         <?php
-        $dotNavItems = '';
-        $slideCounter = 1;
+        $dotNavItems = ''; // Initialize dot navigation items
+        $slideCounter = 1; // To track the first slide for lazy loading
         $sliderConfig = $block->getBannerMageInitParams($bannerBlock)['awRbslider'];
         ?>
         <div
