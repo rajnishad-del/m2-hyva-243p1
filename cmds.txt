@@ -8,6 +8,8 @@ bin/magento setup:upgrade && bin/magento setup:di:compile && bin/magento setup:s
 
 bin/magento setup:upgrade && bin/magento setup:di:compile && bin/magento cache:flush
 
+bin/magento cache:flush
+
 https://app.m2-hyva-243p1.test/
 
 https://app.m2-hyva-243p1.test/backend
@@ -38,7 +40,7 @@ bin/magento dev:template-hints:enable
 
 rm -rf var generated
 
-sudo chown -R www-data:www-data .     (inside warden shell)
+sudo chown -R www-data:www-data .     (inside warden shell, git will not cause issue)
 
 vendor/bin/cache-clean.js --watch      (inside warden shell)
 
@@ -47,3 +49,7 @@ ls -l app/code/Humcommerce/RbsliderHyvacompat/view/frontend/templates
 git checkout branchname
 
 gnome-terminal .
+
+bin/magento deploy:mode:show
+
+if static content is not loading or updating it's a browser problem. in network tab "disable cache" tick
