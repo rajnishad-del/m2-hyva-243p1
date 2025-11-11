@@ -31,7 +31,6 @@
           : this.element.querySelector(".uk-slideshow");
 
         if (!this.container) {
-          console.error("Slideshow container not found");
           return;
         }
 
@@ -43,11 +42,9 @@
         this.slidesCount = this.slides.length;
 
         if (this.slidesCount === 0) {
-          console.error("No slides found");
           return;
         }
 
-        // Set initial state
         this.slides.forEach((slide, index) => {
           if (index === this.current) {
             slide.classList.add("uk-active");
@@ -62,7 +59,6 @@
           }
         });
 
-        // Set up resize handler
         const resizeHandler = () => {
           this.resize();
         };
@@ -70,17 +66,14 @@
         window.addEventListener("resize", resizeHandler);
         window.addEventListener("load", resizeHandler);
 
-        // Initial resize
         setTimeout(() => {
           this.resize();
         }, 80);
 
-        // Set autoplay
         if (this.options.autoplay) {
           this.start();
         }
 
-        // Set up hover pause
         if (this.options.pauseOnHover) {
           this.element.addEventListener("mouseenter", () => {
             this.hovering = true;
@@ -120,7 +113,7 @@
         }
       },
 
-      show(index) {
+      show(index, direction = null) {
         if (
           this.animating ||
           this.current === index ||
@@ -134,10 +127,25 @@
 
         const current = this.slides[this.current];
         const next = this.slides[index];
+
+        if (!direction) {
+          const isWrappingForward =
+            this.current === this.slidesCount - 1 && index === 0;
+          const isWrappingBackward =
+            this.current === 0 && index === this.slidesCount - 1;
+
+          if (isWrappingForward) {
+            direction = "forward";
+          } else if (isWrappingBackward) {
+            direction = "backward";
+          } else {
+            direction = index > this.current ? "forward" : "backward";
+          }
+        }
+
         const animation = this.options.animation || "fade";
 
-        // Apply animation
-        this.applyAnimation(current, next, animation).then(() => {
+        this.applyAnimation(current, next, animation, direction).then(() => {
           current.classList.remove("uk-active");
           current.style.display = "none";
           current.style.position = "absolute";
@@ -149,16 +157,14 @@
           this.current = index;
           this.animating = false;
 
-          // Update navigation dots
           this.updateNavigation();
         });
       },
 
-      applyAnimation(current, next, animation) {
+      applyAnimation(current, next, animation, direction = "forward") {
         return new Promise((resolve) => {
           const duration = this.options.duration;
 
-          // Show next slide
           next.style.display = "block";
           next.style.position = "absolute";
           next.style.top = "0";
@@ -166,42 +172,64 @@
           next.style.width = "100%";
           next.style.opacity = "0";
 
-          // Force reflow
           next.offsetHeight;
 
-          // Set transition
-          current.style.transition = `opacity ${duration}ms ease-in-out`;
-          next.style.transition = `opacity ${duration}ms ease-in-out`;
-
-          // Apply animation based on type
           switch (animation) {
             case "fade":
+              current.style.transition = `opacity ${duration}ms ease-in-out`;
+              next.style.transition = `opacity ${duration}ms ease-in-out`;
+
               current.style.opacity = "0";
               next.style.opacity = "1";
               break;
 
             case "scroll":
             case "swipe":
-              current.style.transform = "translateX(-100%)";
-              current.style.opacity = "0";
-              next.style.transform = "translateX(0)";
-              next.style.opacity = "1";
+              if (direction === "forward") {
+                next.style.transform = "translateX(100%)";
+                next.style.opacity = "0";
+                next.offsetHeight;
+
+                current.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+                next.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+
+                current.style.transform = "translateX(-100%)";
+                current.style.opacity = "0";
+                next.style.transform = "translateX(0)";
+                next.style.opacity = "1";
+              } else {
+                next.style.transform = "translateX(-100%)";
+                next.style.opacity = "0";
+                next.offsetHeight;
+
+                current.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+                next.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+
+                current.style.transform = "translateX(100%)";
+                current.style.opacity = "0";
+                next.style.transform = "translateX(0)";
+                next.style.opacity = "1";
+              }
               break;
 
             case "scale":
+              current.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+              next.style.transition = `opacity ${duration}ms ease-in-out`;
+
               current.style.transform = "scale(0.8)";
               current.style.opacity = "0";
               next.style.opacity = "1";
               break;
 
             default:
+              current.style.transition = `opacity ${duration}ms ease-in-out`;
+              next.style.transition = `opacity ${duration}ms ease-in-out`;
+
               current.style.opacity = "0";
               next.style.opacity = "1";
           }
 
-          // Wait for animation to complete
           setTimeout(() => {
-            // Reset transitions
             current.style.transition = "";
             next.style.transition = "";
             current.style.transform = "";
@@ -213,7 +241,6 @@
       },
 
       updateNavigation() {
-        // Update dot navigation
         const dots = this.element.querySelectorAll(".uk-dotnav li");
         dots.forEach((dot, index) => {
           if (index === this.current) {
@@ -227,13 +254,13 @@
       next() {
         const nextIndex =
           this.current + 1 >= this.slidesCount ? 0 : this.current + 1;
-        this.show(nextIndex);
+        this.show(nextIndex, "forward");
       },
 
       previous() {
         const prevIndex =
           this.current - 1 < 0 ? this.slidesCount - 1 : this.current - 1;
-        this.show(prevIndex);
+        this.show(prevIndex, "backward");
       },
 
       start() {
