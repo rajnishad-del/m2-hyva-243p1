@@ -1,3 +1,416 @@
+// Based on Zepto.js touch.js
+// Zepto.js may be freely distributed under the MIT license.
+
+(function () {
+  const touch = {};
+  let touchTimeout, tapTimeout, swipeTimeout, longTapTimeout;
+  const longTapDelay = 750;
+  let gesture;
+
+  function swipeDirection(x1, x2, y1, y2) {
+    return Math.abs(x1 - x2) >= Math.abs(y1 - y2)
+      ? x1 - x2 > 0
+        ? "Left"
+        : "Right"
+      : y1 - y2 > 0
+      ? "Up"
+      : "Down";
+  }
+
+  function longTap() {
+    longTapTimeout = null;
+    if (touch.last && touch.el) {
+      touch.el.dispatchEvent(new CustomEvent("longTap", { bubbles: true }));
+      Object.keys(touch).forEach((key) => delete touch[key]);
+    }
+  }
+
+  function cancelLongTap() {
+    if (longTapTimeout) clearTimeout(longTapTimeout);
+    longTapTimeout = null;
+  }
+
+  function cancelAll() {
+    if (touchTimeout) clearTimeout(touchTimeout);
+    if (tapTimeout) clearTimeout(tapTimeout);
+    if (swipeTimeout) clearTimeout(swipeTimeout);
+    if (longTapTimeout) clearTimeout(longTapTimeout);
+    touchTimeout = tapTimeout = swipeTimeout = longTapTimeout = null;
+    Object.keys(touch).forEach((key) => delete touch[key]);
+  }
+
+  function isPrimaryTouch(event) {
+    return event.pointerType === "touch" && event.isPrimary;
+  }
+
+  function getTarget(el) {
+    return el.tagName ? el : el.parentNode;
+  }
+
+  function attachCustomEvent(eventName) {
+    Element.prototype[eventName] = function (callback) {
+      this.addEventListener(eventName, callback);
+      return this;
+    };
+  }
+
+  // Initialize when DOM is ready
+  function init() {
+    let now,
+      delta,
+      deltaX = 0,
+      deltaY = 0,
+      firstTouch;
+
+    // MSGesture for IE10
+    if ("MSGesture" in window) {
+      gesture = new MSGesture();
+      gesture.target = document.body;
+    }
+
+    // Swipe gesture end
+    document.addEventListener("MSGestureEnd", function (e) {
+      const velocityX = e.originalEvent?.velocityX || 0;
+      const velocityY = e.originalEvent?.velocityY || 0;
+
+      const swipeDirectionFromVelocity =
+        velocityX > 1
+          ? "Right"
+          : velocityX < -1
+          ? "Left"
+          : velocityY > 1
+          ? "Down"
+          : velocityY < -1
+          ? "Up"
+          : null;
+
+      if (swipeDirectionFromVelocity && touch.el) {
+        touch.el.dispatchEvent(new CustomEvent("swipe", { bubbles: true }));
+        touch.el.dispatchEvent(
+          new CustomEvent("swipe" + swipeDirectionFromVelocity, {
+            bubbles: true,
+          })
+        );
+      }
+    });
+
+    document.addEventListener("gestureend", function (e) {
+      const velocityX = e.originalEvent?.velocityX || 0;
+      const velocityY = e.originalEvent?.velocityY || 0;
+
+      const swipeDirectionFromVelocity =
+        velocityX > 1
+          ? "Right"
+          : velocityX < -1
+          ? "Left"
+          : velocityY > 1
+          ? "Down"
+          : velocityY < -1
+          ? "Up"
+          : null;
+
+      if (swipeDirectionFromVelocity && touch.el) {
+        touch.el.dispatchEvent(new CustomEvent("swipe", { bubbles: true }));
+        touch.el.dispatchEvent(
+          new CustomEvent("swipe" + swipeDirectionFromVelocity, {
+            bubbles: true,
+          })
+        );
+      }
+    });
+
+    // Touch start
+    document.addEventListener("touchstart", function (e) {
+      firstTouch = e.touches[0];
+      now = Date.now();
+      delta = now - (touch.last || now);
+      touch.el = getTarget(firstTouch.target);
+
+      if (touchTimeout) clearTimeout(touchTimeout);
+
+      touch.x1 = firstTouch.pageX;
+      touch.y1 = firstTouch.pageY;
+
+      if (delta > 0 && delta <= 250) touch.isDoubleTap = true;
+
+      touch.last = now;
+      longTapTimeout = setTimeout(longTap, longTapDelay);
+    });
+
+    document.addEventListener("MSPointerDown", function (e) {
+      if (!isPrimaryTouch(e)) return;
+
+      firstTouch = e;
+      now = Date.now();
+      delta = now - (touch.last || now);
+      touch.el = getTarget(firstTouch.target);
+
+      if (touchTimeout) clearTimeout(touchTimeout);
+
+      touch.x1 = firstTouch.pageX;
+      touch.y1 = firstTouch.pageY;
+
+      if (delta > 0 && delta <= 250) touch.isDoubleTap = true;
+
+      touch.last = now;
+      longTapTimeout = setTimeout(longTap, longTapDelay);
+
+      if (gesture) gesture.addPointer(e.pointerId);
+    });
+
+    document.addEventListener("pointerdown", function (e) {
+      if (!isPrimaryTouch(e)) return;
+
+      firstTouch = e;
+      now = Date.now();
+      delta = now - (touch.last || now);
+      touch.el = getTarget(firstTouch.target);
+
+      if (touchTimeout) clearTimeout(touchTimeout);
+
+      touch.x1 = firstTouch.pageX;
+      touch.y1 = firstTouch.pageY;
+
+      if (delta > 0 && delta <= 250) touch.isDoubleTap = true;
+
+      touch.last = now;
+      longTapTimeout = setTimeout(longTap, longTapDelay);
+
+      if (gesture) gesture.addPointer(e.pointerId);
+    });
+
+    // Touch move
+    document.addEventListener("touchmove", function (e) {
+      firstTouch = e.touches[0];
+      cancelLongTap();
+      touch.x2 = firstTouch.pageX;
+      touch.y2 = firstTouch.pageY;
+
+      deltaX += Math.abs(touch.x1 - touch.x2);
+      deltaY += Math.abs(touch.y1 - touch.y2);
+    });
+
+    document.addEventListener("MSPointerMove", function (e) {
+      if (!isPrimaryTouch(e)) return;
+
+      cancelLongTap();
+      touch.x2 = e.pageX;
+      touch.y2 = e.pageY;
+
+      deltaX += Math.abs(touch.x1 - touch.x2);
+      deltaY += Math.abs(touch.y1 - touch.y2);
+    });
+
+    document.addEventListener("pointermove", function (e) {
+      if (!isPrimaryTouch(e)) return;
+
+      cancelLongTap();
+      touch.x2 = e.pageX;
+      touch.y2 = e.pageY;
+
+      deltaX += Math.abs(touch.x1 - touch.x2);
+      deltaY += Math.abs(touch.y1 - touch.y2);
+    });
+
+    // Touch end
+    document.addEventListener("touchend", function (e) {
+      cancelLongTap();
+
+      // Swipe detection
+      if (
+        (touch.x2 && Math.abs(touch.x1 - touch.x2) > 30) ||
+        (touch.y2 && Math.abs(touch.y1 - touch.y2) > 30)
+      ) {
+        swipeTimeout = setTimeout(function () {
+          if (touch.el) {
+            touch.el.dispatchEvent(new CustomEvent("swipe", { bubbles: true }));
+            touch.el.dispatchEvent(
+              new CustomEvent(
+                "swipe" +
+                  swipeDirection(touch.x1, touch.x2, touch.y1, touch.y2),
+                { bubbles: true }
+              )
+            );
+          }
+          Object.keys(touch).forEach((key) => delete touch[key]);
+        }, 0);
+
+        // Tap detection
+      } else if ("last" in touch) {
+        if (isNaN(deltaX) || (deltaX < 30 && deltaY < 30)) {
+          tapTimeout = setTimeout(function () {
+            if (touch.el) {
+              const tapEvent = new CustomEvent("tap", { bubbles: true });
+              tapEvent.cancelTouch = cancelAll;
+              touch.el.dispatchEvent(tapEvent);
+
+              if (touch.isDoubleTap) {
+                touch.el.dispatchEvent(
+                  new CustomEvent("doubleTap", { bubbles: true })
+                );
+                Object.keys(touch).forEach((key) => delete touch[key]);
+              } else {
+                touchTimeout = setTimeout(function () {
+                  touchTimeout = null;
+                  if (touch.el) {
+                    touch.el.dispatchEvent(
+                      new CustomEvent("singleTap", { bubbles: true })
+                    );
+                  }
+                  Object.keys(touch).forEach((key) => delete touch[key]);
+                }, 250);
+              }
+            }
+          }, 0);
+        } else {
+          Object.keys(touch).forEach((key) => delete touch[key]);
+        }
+        deltaX = deltaY = 0;
+      }
+    });
+
+    document.addEventListener("MSPointerUp", function (e) {
+      if (!isPrimaryTouch(e)) return;
+
+      cancelLongTap();
+
+      if (
+        (touch.x2 && Math.abs(touch.x1 - touch.x2) > 30) ||
+        (touch.y2 && Math.abs(touch.y1 - touch.y2) > 30)
+      ) {
+        swipeTimeout = setTimeout(function () {
+          if (touch.el) {
+            touch.el.dispatchEvent(new CustomEvent("swipe", { bubbles: true }));
+            touch.el.dispatchEvent(
+              new CustomEvent(
+                "swipe" +
+                  swipeDirection(touch.x1, touch.x2, touch.y1, touch.y2),
+                { bubbles: true }
+              )
+            );
+          }
+          Object.keys(touch).forEach((key) => delete touch[key]);
+        }, 0);
+      } else if ("last" in touch) {
+        if (isNaN(deltaX) || (deltaX < 30 && deltaY < 30)) {
+          tapTimeout = setTimeout(function () {
+            if (touch.el) {
+              const tapEvent = new CustomEvent("tap", { bubbles: true });
+              tapEvent.cancelTouch = cancelAll;
+              touch.el.dispatchEvent(tapEvent);
+
+              if (touch.isDoubleTap) {
+                touch.el.dispatchEvent(
+                  new CustomEvent("doubleTap", { bubbles: true })
+                );
+                Object.keys(touch).forEach((key) => delete touch[key]);
+              } else {
+                touchTimeout = setTimeout(function () {
+                  touchTimeout = null;
+                  if (touch.el) {
+                    touch.el.dispatchEvent(
+                      new CustomEvent("singleTap", { bubbles: true })
+                    );
+                  }
+                  Object.keys(touch).forEach((key) => delete touch[key]);
+                }, 250);
+              }
+            }
+          }, 0);
+        } else {
+          Object.keys(touch).forEach((key) => delete touch[key]);
+        }
+        deltaX = deltaY = 0;
+      }
+    });
+
+    document.addEventListener("pointerup", function (e) {
+      if (!isPrimaryTouch(e)) return;
+
+      cancelLongTap();
+
+      if (
+        (touch.x2 && Math.abs(touch.x1 - touch.x2) > 30) ||
+        (touch.y2 && Math.abs(touch.y1 - touch.y2) > 30)
+      ) {
+        swipeTimeout = setTimeout(function () {
+          if (touch.el) {
+            touch.el.dispatchEvent(new CustomEvent("swipe", { bubbles: true }));
+            touch.el.dispatchEvent(
+              new CustomEvent(
+                "swipe" +
+                  swipeDirection(touch.x1, touch.x2, touch.y1, touch.y2),
+                { bubbles: true }
+              )
+            );
+          }
+          Object.keys(touch).forEach((key) => delete touch[key]);
+        }, 0);
+      } else if ("last" in touch) {
+        if (isNaN(deltaX) || (deltaX < 30 && deltaY < 30)) {
+          tapTimeout = setTimeout(function () {
+            if (touch.el) {
+              const tapEvent = new CustomEvent("tap", { bubbles: true });
+              tapEvent.cancelTouch = cancelAll;
+              touch.el.dispatchEvent(tapEvent);
+
+              if (touch.isDoubleTap) {
+                touch.el.dispatchEvent(
+                  new CustomEvent("doubleTap", { bubbles: true })
+                );
+                Object.keys(touch).forEach((key) => delete touch[key]);
+              } else {
+                touchTimeout = setTimeout(function () {
+                  touchTimeout = null;
+                  if (touch.el) {
+                    touch.el.dispatchEvent(
+                      new CustomEvent("singleTap", { bubbles: true })
+                    );
+                  }
+                  Object.keys(touch).forEach((key) => delete touch[key]);
+                }, 250);
+              }
+            }
+          }, 0);
+        } else {
+          Object.keys(touch).forEach((key) => delete touch[key]);
+        }
+        deltaX = deltaY = 0;
+      }
+    });
+
+    // Cancel all events
+    document.addEventListener("touchcancel", cancelAll);
+    document.addEventListener("MSPointerCancel", cancelAll);
+    document.addEventListener("pointercancel", cancelAll);
+
+    // Scrolling cancels all ongoing events
+    window.addEventListener("scroll", cancelAll);
+  }
+
+  // Attach custom event methods to Element prototype
+  [
+    "swipe",
+    "swipeLeft",
+    "swipeRight",
+    "swipeUp",
+    "swipeDown",
+    "doubleTap",
+    "tap",
+    "singleTap",
+    "longTap",
+  ].forEach((eventName) => {
+    attachCustomEvent(eventName);
+  });
+
+  // Initialize when DOM is ready
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+
 (() => {
   "use strict";
 
@@ -83,6 +496,16 @@
             this.hovering = false;
           });
         }
+
+        //Zepto.js Swiping Event
+        this.element.addEventListener("swipeLeft", () => {
+          this.stop();
+          this.next();
+        });
+        this.element.addEventListener("swipeRight", () => {
+          this.stop();
+          this.previous();
+        });
 
         return this;
       },
