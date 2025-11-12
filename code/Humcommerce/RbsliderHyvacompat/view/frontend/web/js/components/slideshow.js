@@ -255,13 +255,7 @@
        *
        * @param {number} index - Index of slide to show
        */
-      show(index) {
-        /**
-         * prevent invalid operations
-         * WHY:
-         * - animating: Prevent clicks during transition (causes visual glitches)
-         * - current === index: No need to show already-active slide
-         */
+      show(index, direction = null) {
         if (
           this.animating ||
           this.current === index ||
@@ -271,36 +265,40 @@
           return;
         }
 
-        this.animating = true; // Lock to prevent concurrent animations
+        this.animating = true;
 
-        const current = this.slides[this.current]; // Currently visible slide
-        const next = this.slides[index]; // Slide to show
+        const current = this.slides[this.current];
+        const next = this.slides[index];
+
+        if (!direction) {
+          const isWrappingForward =
+            this.current === this.slidesCount - 1 && index === 0;
+          const isWrappingBackward =
+            this.current === 0 && index === this.slidesCount - 1;
+
+          if (isWrappingForward) {
+            direction = "forward";
+          } else if (isWrappingBackward) {
+            direction = "backward";
+          } else {
+            direction = index > this.current ? "forward" : "backward";
+          }
+        }
+
         const animation = this.options.animation || "fade";
 
-        /**
-         * Apply animation, then update state when complete
-         * WHY: Animation is async (takes time), need to wait before cleanup
-         * CHANGE: Using Promises instead of jQuery Deferred
-         */
-        this.applyAnimation(current, next, animation).then(() => {
-          /**
-           * Cleanup after animation
-           * WHY: Hide old slide completely and finalize new slide position
-           */
+        this.applyAnimation(current, next, animation, direction).then(() => {
           current.classList.remove("uk-active");
           current.style.display = "none";
-          current.style.position = "absolute"; // Stack on top for future transitions
+          current.style.position = "absolute";
 
           next.classList.add("uk-active");
           next.style.display = "block";
-          next.style.position = "relative"; // In document flow (visible)
+          next.style.position = "relative";
 
-          this.current = index; // Update current slide index
-          this.animating = false; // Unlock for next transition
+          this.current = index;
+          this.animating = false;
 
-          /**
-           * Update navigation dots to reflect new active slide
-           */
           this.updateNavigation();
         });
       },
@@ -315,7 +313,7 @@
        * @param {string} animation - Animation type (fade/scroll/swipe/scale)
        * @returns {Promise} Resolves when animation completes
        */
-      applyAnimation(current, next, animation) {
+      applyAnimation(current, next, animation, direction = "forward") {
         return new Promise((resolve) => {
           const duration = this.options.duration;
 
@@ -359,21 +357,76 @@
                * WHY: Most common and smooth animation type
                * Current fades out while next fades in
                */
+              current.style.transition = `opacity ${duration}ms ease-in-out`;
+              next.style.transition = `opacity ${duration}ms ease-in-out`;
+
               current.style.opacity = "0";
               next.style.opacity = "1";
               break;
 
             case "scroll":
+              /**
+               * Scroll/Swipe: Horizontal slide effect
+               * WHY: Gives sense of sliding through slides
+               * Current slides left, next slides in from right
+               */
+              if (direction === "forward") {
+                next.style.transform = "translateX(100%)";
+                next.style.opacity = "0";
+                next.offsetHeight;
+
+                current.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+                next.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+
+                current.style.transform = "translateX(-100%)";
+                current.style.opacity = "0";
+                next.style.transform = "translateX(0)";
+                next.style.opacity = "1";
+              } else {
+                next.style.transform = "translateX(-100%)";
+                next.style.opacity = "0";
+                next.offsetHeight;
+
+                current.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+                next.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+
+                current.style.transform = "translateX(100%)";
+                current.style.opacity = "0";
+                next.style.transform = "translateX(0)";
+                next.style.opacity = "1";
+              }
+              break;
             case "swipe":
               /**
                * Scroll/Swipe: Horizontal slide effect
                * WHY: Gives sense of sliding through slides
                * Current slides left, next slides in from right
                */
-              current.style.transform = "translateX(-100%)";
-              current.style.opacity = "0";
-              next.style.transform = "translateX(0)";
-              next.style.opacity = "1";
+              if (direction === "forward") {
+                next.style.transform = "translateX(100%)";
+                next.style.opacity = "0";
+                next.offsetHeight;
+
+                current.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+                next.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+
+                current.style.transform = "translateX(-100%)";
+                current.style.opacity = "0";
+                next.style.transform = "translateX(0)";
+                next.style.opacity = "1";
+              } else {
+                next.style.transform = "translateX(-100%)";
+                next.style.opacity = "0";
+                next.offsetHeight;
+
+                current.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+                next.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+
+                current.style.transform = "translateX(100%)";
+                current.style.opacity = "0";
+                next.style.transform = "translateX(0)";
+                next.style.opacity = "1";
+              }
               break;
 
             case "scale":
@@ -382,6 +435,9 @@
                * WHY: Creates depth perception, modern feel
                * Current shrinks away, next fades in
                */
+              current.style.transition = `opacity ${duration}ms ease-in-out, transform ${duration}ms ease-in-out`;
+              next.style.transition = `opacity ${duration}ms ease-in-out`;
+
               current.style.transform = "scale(0.8)";
               current.style.opacity = "0";
               next.style.opacity = "1";
@@ -392,6 +448,9 @@
                * Fallback to fade if unknown animation type
                * WHY: Ensures slideshow still works with invalid config
                */
+              current.style.transition = `opacity ${duration}ms ease-in-out`;
+              next.style.transition = `opacity ${duration}ms ease-in-out`;
+
               current.style.opacity = "0";
               next.style.opacity = "1";
           }
