@@ -52,4 +52,21 @@ gnome-terminal .
 
 bin/magento deploy:mode:show
 
+picom-trans -s 50
+
+npm --prefix vendor/hyva-themes/magento2-default-theme/web/tailwind run watch
+
+cd vendor/hyva-themes/magento2-default-theme/web/tailwind && npm run build-prod  (if fails then "npm install" before "npm run build-prod"
+"npm run build-prod" generates a css file of size 78k containing only most used tailwind classes. "npm run build-dev" will generate a css file of size 5mb containing all the classes 
+)
+
+bin/magento config:show web/unsecure/base_url
+
+
 if static content is not loading or updating it's a browser problem. in network tab "disable cache" tick
+
+warden env up
+
+warden svc start
+
+bin/magento info:adminuri
