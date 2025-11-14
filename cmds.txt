@@ -21,6 +21,14 @@ https://app.m2-hyva-243p1.test/backend
 Admin email: admin@gmail.compassword = Admin@123
 email = admin@gmail.com
 
+bin/magento admin:user:create \
+    --admin-user="newadmin" \
+    --admin-password="Admin@123" \
+    --admin-firstname="New" \
+    --admin-lastname="Admin" \
+    --admin-email="newadmin@example.com"
+
+
 
 git reset --hard HEAD && git clean -fd
 
@@ -69,4 +77,55 @@ warden env up
 
 warden svc start
 
+bin/magento setup:install \
+--base-url=https://app.m2-hyva.test/ \
+--db-host=db \
+--db-name=magento \
+--db-user=magento \
+--db-password=magento \
+--admin-firstname=Admin \
+--admin-lastname=User \
+--admin-email=admin@example.com \
+--admin-user=admin \
+--admin-password=Admin123! \
+--language=en_US \
+--currency=USD \
+--timezone=America/Chicago \
+--backend-frontname=admin
+
+
+
 bin/magento info:adminuri
+
+
+rajnishad@hbwsl-IdeaPad-Slim-3-15IAH8:~/Desktop/m2-hyva-243p1$ docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' m2-hyva-243p1-nginx-1
+172.23.0.11
+
+
+www-data@m2-hyva-243p1-php-fpm:/var/www/html$ bin/magento config:show web/unsecure/base_url
+https://app.m2-hyva-243p1.test/
+
+
+bin/magento setup:store-config:set --base-url="http://172.23.0.11/"
+bin/magento setup:store-config:set --base-url-secure="http://172.23.0.11/"
+bin/magento cache:flush
+
+bin/magento setup:store-config:set --base-url="https://app.m2-hyva-243p1.test/"
+bin/magento setup:store-config:set --base-url-secure="https://app.m2-hyva-243p1.test/"
+
+
+bin/magento config:set web/secure/use_in_frontend 0 --lock-env
+bin/magento config:set web/secure/use_in_adminhtml 0
+bin/magento cache:flush
+
+
+-- Unsecure URL (HTTP)
+INSERT INTO core_config_data (scope, scope_id, path, value)
+VALUES ('default', 0, 'web/unsecure/base_url', 'http://172.23.0.11/')
+ON DUPLICATE KEY UPDATE value='http://172.23.0.11/';
+
+-- Secure URL (HTTPS)
+INSERT INTO core_config_data (scope, scope_id, path, value)
+VALUES ('default', 0, 'web/secure/base_url', 'http://172.23.0.11/')
+ON DUPLICATE KEY UPDATE value='http://172.23.0.11/';
+
